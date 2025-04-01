@@ -75,6 +75,18 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -89,22 +101,54 @@
     <!-- Cloudinary Upload Widget JS -->
     <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
     <script>
-        // Configuración de Cloudinary (usa tus credenciales)
+        // Configuración de Cloudinary
         const cloudName = 'dba9d8';
         const apiKey = '528757166221984';
         const unsignedUploadPreset = 'web_upload';
 
-        // Inicializar el widget
+        // Obtener videos guardados del localStorage al cargar la página
+        let savedVideos = JSON.parse(localStorage.getItem('cloudinary_videos')) || [];
+
+        // Función para renderizar videos en la galería
+        function renderVideos() {
+            const videoGallery = document.getElementById('videoGallery');
+            videoGallery.innerHTML = ''; // Limpiar galería antes de renderizar
+
+            savedVideos.forEach((video, index) => {
+                const videoCard = document.createElement('div');
+                videoCard.className = 'video-card';
+                videoCard.innerHTML = `
+                    <video controls src="${video.url}"></video>
+                    <div class="video-info">
+                        <p><strong>ID:</strong> ${video.public_id}</p>
+                        <p><strong>Formato:</strong> ${video.format}</p>
+                        <button class="delete-btn" data-index="${index}">Eliminar</button>
+                    </div>
+                `;
+                videoGallery.appendChild(videoCard);
+            });
+
+            // Agregar evento a los botones de eliminar
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = e.target.getAttribute('data-index');
+                    savedVideos.splice(index, 1);
+                    localStorage.setItem('cloudinary_videos', JSON.stringify(savedVideos));
+                    renderVideos(); // Volver a renderizar
+                });
+            });
+        }
+
+        // Inicializar el widget de Cloudinary
         const widget = cloudinary.createUploadWidget(
             {
                 cloudName: cloudName,
                 apiKey: apiKey,
                 uploadPreset: unsignedUploadPreset,
-                sources: ['local', 'url', 'camera'], // Fuentes de subida
-                resourceType: 'video', // Aseguramos que solo suba videos
-                multiple: false, // Subir un solo archivo a la vez
-                maxFileSize: 15000000, // Límite de 15MB (ajusta según necesites)
-                clientAllowedFormats: ['mp4', 'mov', 'avi'], // Formatos permitidos
+                resourceType: 'video',
+                multiple: false,
+                maxFileSize: 15000000, // 15MB
+                clientAllowedFormats: ['mp4', 'mov', 'avi'],
                 showAdvancedOptions: true,
                 styles: {
                     palette: {
@@ -126,23 +170,21 @@
             },
             (error, result) => {
                 if (!error && result && result.event === 'success') {
+                    // Guardar el video en el localStorage
+                    savedVideos.push({
+                        url: result.info.secure_url,
+                        public_id: result.info.public_id,
+                        format: result.info.format
+                    });
+                    localStorage.setItem('cloudinary_videos', JSON.stringify(savedVideos));
+
                     // Mostrar mensaje de éxito
                     document.getElementById('status').className = 'status success';
                     document.getElementById('status').innerHTML = 
-                        `Video subido con éxito! URL: <a href="${result.info.url}" target="_blank">${result.info.public_id}</a>`;
-                    
-                    // Mostrar el video en la galería
-                    const videoGallery = document.getElementById('videoGallery');
-                    const videoCard = document.createElement('div');
-                    videoCard.className = 'video-card';
-                    videoCard.innerHTML = `
-                        <video controls src="${result.info.secure_url}"></video>
-                        <div class="video-info">
-                            <p><strong>ID:</strong> ${result.info.public_id}</p>
-                            <p><strong>Formato:</strong> ${result.info.format}</p>
-                        </div>
-                    `;
-                    videoGallery.appendChild(videoCard);
+                        `Video subido con éxito!`;
+
+                    // Renderizar los videos nuevamente
+                    renderVideos();
                 } else if (error) {
                     document.getElementById('status').className = 'status error';
                     document.getElementById('status').innerHTML = `Error: ${error.message}`;
@@ -154,6 +196,9 @@
         document.getElementById('uploadButton').addEventListener('click', () => {
             widget.open();
         });
+
+        // Renderizar videos al cargar la página
+        document.addEventListener('DOMContentLoaded', renderVideos);
     </script>
 </body>
 </html>

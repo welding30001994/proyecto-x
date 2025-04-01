@@ -25,42 +25,60 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             padding: 30px;
             width: 90%;
-            max-width: 500px;
+            max-width: 600px;
             text-align: center;
         }
-        #uploadButton {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 5px;
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            margin-bottom: 20px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background 0.3s;
         }
-        #uploadButton:hover {
-            background-color: #2980b9;
+        .upload-area:hover {
+            background: #f0f8ff;
+        }
+        .upload-area p {
+            margin: 0;
+            font-size: 18px;
+            color: #3498db;
         }
         #videoGallery {
             margin-top: 30px;
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 20px;
-            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
         }
         .video-card {
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            width: 300px;
         }
         .video-card video {
             width: 100%;
+            height: 240px; /* Altura fija para todos los videos */
+            object-fit: cover; /* Ajusta el video al tamaño sin deformar */
             display: block;
         }
         .video-info {
-            padding: 10px;
+            padding: 15px;
+        }
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
         }
         .status {
             margin-top: 20px;
@@ -75,25 +93,14 @@
             background-color: #f8d7da;
             color: #721c24;
         }
-        .delete-btn {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            margin-top: 5px;
-        }
-        .delete-btn:hover {
-            background-color: #c0392b;
-        }
     </style>
 </head>
 <body>
     <h1>Subir Videos a Cloudinary</h1>
     <div class="upload-container">
-        <p>Haz clic en el botón para subir un video:</p>
-        <button id="uploadButton">Subir Video</button>
+        <div class="upload-area" id="uploadArea">
+            <p>Arrastra tu video aquí o haz clic para seleccionar</p>
+        </div>
         <div id="status" class="status"></div>
     </div>
     <div id="videoGallery"></div>
@@ -106,13 +113,13 @@
         const apiKey = '528757166221984';
         const unsignedUploadPreset = 'web_upload';
 
-        // Obtener videos guardados del localStorage al cargar la página
+        // Obtener videos guardados del localStorage
         let savedVideos = JSON.parse(localStorage.getItem('cloudinary_videos')) || [];
 
-        // Función para renderizar videos en la galería
+        // Función para renderizar videos
         function renderVideos() {
             const videoGallery = document.getElementById('videoGallery');
-            videoGallery.innerHTML = ''; // Limpiar galería antes de renderizar
+            videoGallery.innerHTML = '';
 
             savedVideos.forEach((video, index) => {
                 const videoCard = document.createElement('div');
@@ -120,34 +127,32 @@
                 videoCard.innerHTML = `
                     <video controls src="${video.url}"></video>
                     <div class="video-info">
-                        <p><strong>ID:</strong> ${video.public_id}</p>
-                        <p><strong>Formato:</strong> ${video.format}</p>
-                        <button class="delete-btn" data-index="${index}">Eliminar</button>
+                        <button class="delete-btn" data-index="${index}">Eliminar Video</button>
                     </div>
                 `;
                 videoGallery.appendChild(videoCard);
             });
 
-            // Agregar evento a los botones de eliminar
+            // Evento para eliminar videos
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const index = e.target.getAttribute('data-index');
                     savedVideos.splice(index, 1);
                     localStorage.setItem('cloudinary_videos', JSON.stringify(savedVideos));
-                    renderVideos(); // Volver a renderizar
+                    renderVideos();
                 });
             });
         }
 
-        // Inicializar el widget de Cloudinary
+        // Configurar el widget de Cloudinary
         const widget = cloudinary.createUploadWidget(
             {
                 cloudName: cloudName,
                 apiKey: apiKey,
                 uploadPreset: unsignedUploadPreset,
                 resourceType: 'video',
-                multiple: false,
-                maxFileSize: 15000000, // 15MB
+                multiple: true,  // Permitir múltiples videos
+                maxFileSize: 50000000, // 50MB (ajustable)
                 clientAllowedFormats: ['mp4', 'mov', 'avi'],
                 showAdvancedOptions: true,
                 styles: {
@@ -170,30 +175,24 @@
             },
             (error, result) => {
                 if (!error && result && result.event === 'success') {
-                    // Guardar el video en el localStorage
                     savedVideos.push({
                         url: result.info.secure_url,
                         public_id: result.info.public_id,
                         format: result.info.format
                     });
                     localStorage.setItem('cloudinary_videos', JSON.stringify(savedVideos));
-
-                    // Mostrar mensaje de éxito
                     document.getElementById('status').className = 'status success';
-                    document.getElementById('status').innerHTML = 
-                        `Video subido con éxito!`;
-
-                    // Renderizar los videos nuevamente
+                    document.getElementById('status').innerHTML = '✅ Video subido correctamente!';
                     renderVideos();
                 } else if (error) {
                     document.getElementById('status').className = 'status error';
-                    document.getElementById('status').innerHTML = `Error: ${error.message}`;
+                    document.getElementById('status').innerHTML = `❌ Error: ${error.message}`;
                 }
             }
         );
 
-        // Abrir widget al hacer clic en el botón
-        document.getElementById('uploadButton').addEventListener('click', () => {
+        // Abrir widget al hacer clic en el área de subida
+        document.getElementById('uploadArea').addEventListener('click', () => {
             widget.open();
         });
 

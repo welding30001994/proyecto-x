@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Videos a Cloudinary</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .upload-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        #uploadButton {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #uploadButton:hover {
+            background-color: #2980b9;
+        }
+        #videoGallery {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .video-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 300px;
+        }
+        .video-card video {
+            width: 100%;
+            display: block;
+        }
+        .video-info {
+            padding: 10px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Subir Videos a Cloudinary</h1>
+    <div class="upload-container">
+        <p>Haz clic en el botón para subir un video:</p>
+        <button id="uploadButton">Subir Video</button>
+        <div id="status" class="status"></div>
+    </div>
+    <div id="videoGallery"></div>
+
+    <!-- Cloudinary Upload Widget JS -->
+    <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+    <script>
+        // Configuración de Cloudinary (usa tus credenciales)
+        const cloudName = 'dba9d8';
+        const apiKey = '528757166221984';
+        const unsignedUploadPreset = 'web_upload';
+
+        // Inicializar el widget
+        const widget = cloudinary.createUploadWidget(
+            {
+                cloudName: cloudName,
+                apiKey: apiKey,
+                uploadPreset: unsignedUploadPreset,
+                sources: ['local', 'url', 'camera'], // Fuentes de subida
+                resourceType: 'video', // Aseguramos que solo suba videos
+                multiple: false, // Subir un solo archivo a la vez
+                maxFileSize: 15000000, // Límite de 15MB (ajusta según necesites)
+                clientAllowedFormats: ['mp4', 'mov', 'avi'], // Formatos permitidos
+                showAdvancedOptions: true,
+                styles: {
+                    palette: {
+                        window: "#2c3e50",
+                        windowBorder: "#3498db",
+                        tabIcon: "#3498db",
+                        menuIcons: "#3498db",
+                        textDark: "#2c3e50",
+                        textLight: "#ffffff",
+                        link: "#3498db",
+                        action: "#3498db",
+                        inactiveTabIcon: "#bdc3c7",
+                        error: "#e74c3c",
+                        inProgress: "#3498db",
+                        complete: "#2ecc71",
+                        sourceBg: "#ecf0f1"
+                    }
+                }
+            },
+            (error, result) => {
+                if (!error && result && result.event === 'success') {
+                    // Mostrar mensaje de éxito
+                    document.getElementById('status').className = 'status success';
+                    document.getElementById('status').innerHTML = 
+                        `Video subido con éxito! URL: <a href="${result.info.url}" target="_blank">${result.info.public_id}</a>`;
+                    
+                    // Mostrar el video en la galería
+                    const videoGallery = document.getElementById('videoGallery');
+                    const videoCard = document.createElement('div');
+                    videoCard.className = 'video-card';
+                    videoCard.innerHTML = `
+                        <video controls src="${result.info.secure_url}"></video>
+                        <div class="video-info">
+                            <p><strong>ID:</strong> ${result.info.public_id}</p>
+                            <p><strong>Formato:</strong> ${result.info.format}</p>
+                        </div>
+                    `;
+                    videoGallery.appendChild(videoCard);
+                } else if (error) {
+                    document.getElementById('status').className = 'status error';
+                    document.getElementById('status').innerHTML = `Error: ${error.message}`;
+                }
+            }
+        );
+
+        // Abrir widget al hacer clic en el botón
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            widget.open();
+        });
+    </script>
+</body>
+</html>
